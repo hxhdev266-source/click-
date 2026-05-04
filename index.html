@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>click game</title>
+<title>لعبة الضغط المتطورة</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
 
@@ -23,7 +23,7 @@
     padding: 20px;
   }
 
- .stats {
+.stats {
     position: fixed;
     top: 20px;
     left: 50%;
@@ -38,21 +38,21 @@
     font-weight: 700;
     border: 2px solid rgba(255,255,255,0.2);
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    z-index: 10;
+    z-index: 100;
   }
 
- .stat-number {
+.stat-number {
     color: #ffd700;
     text-shadow: 0 0 10px rgba(255,215,0,0.5);
   }
 
- .game-container {
+.game-container {
     position: relative;
     width: 100%;
     height: 60vh;
   }
 
- .click-btn {
+.click-btn {
     position: absolute;
     padding: 25px 50px;
     font-size: 1.5rem;
@@ -66,37 +66,50 @@
     box-shadow: 0 15px 35px rgba(0,0,0,0.4);
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     user-select: none;
+    z-index: 50;
   }
 
- .click-btn:hover {
+.click-btn:hover {
     transform: scale(1.1);
     box-shadow: 0 20px 45px rgba(0,0,0,0.5);
   }
 
- .click-btn:active {
+.click-btn:active {
     transform: scale(0.95);
   }
 
- .message {
+.message {
     position: fixed;
     bottom: 30px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(0,0,0,0.6);
-    padding: 12px 30px;
+    background: rgba(0,0,0,0.7);
+    padding: 15px 35px;
     border-radius: 20px;
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     opacity: 0;
     transition: all 0.4s ease;
     pointer-events: none;
+    z-index: 100;
+    border: 2px solid #00f2fe;
+    max-width: 90%;
+    text-align: center;
   }
 
- .message.show {
+.message.show {
     opacity: 1;
     bottom: 50px;
   }
 
- .particles {
+.message.motivational {
+    background: linear-gradient(135deg, #00f2fe, #4facfe);
+    color: #000;
+    font-weight: 700;
+    font-size: 1.4rem;
+    padding: 20px 40px;
+  }
+
+.particles {
     position: fixed;
     top: 0;
     left: 0;
@@ -106,7 +119,7 @@
     z-index: -1;
   }
 
- .particle {
+.particle {
     position: absolute;
     width: 8px;
     height: 8px;
@@ -116,17 +129,11 @@
   }
 
   @keyframes explode {
-    from {
-      opacity: 1;
-      transform: translate(0, 0) scale(1);
-    }
-    to {
-      opacity: 0;
-      transform: translate(var(--tx), var(--ty)) scale(0);
-    }
+    from { opacity: 1; transform: translate(0, 0) scale(1); }
+    to { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0); }
   }
 
- .level-up {
+.level-up {
     animation: levelUp 0.8s ease;
   }
 
@@ -134,6 +141,59 @@
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.2); filter: brightness(1.5); }
   }
+
+  /* ستايل الألعاب المدمجة */
+.mini-game {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 500px;
+    height: 400px;
+    background: rgba(0,0,0,0.9);
+    border-radius: 20px;
+    border: 3px solid #00f2fe;
+    display: none;
+    z-index: 200;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.7);
+  }
+
+.mini-game.active { display: block; }
+
+.mini-game canvas {
+    width: 100%;
+    height: 100%;
+    border-radius: 17px;
+  }
+
+.close-game {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 8px 15px;
+    background: #f44336;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 700;
+    z-index: 201;
+  }
+
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    display: none;
+    z-index: 199;
+  }
+
+.overlay.active { display: block; }
 </style>
 </head>
 <body>
@@ -150,16 +210,31 @@
 <div class="message" id="message"></div>
 <div class="particles" id="particles"></div>
 
+<!-- لعبة Flappy -->
+<div class="overlay" id="overlay"></div>
+<div class="mini-game" id="flappyGame">
+  <button class="close-game" onclick="closeMiniGame()">✕ خروج</button>
+  <canvas id="flappyCanvas"></canvas>
+</div>
+
+<!-- لعبة المطاردة -->
+<div class="mini-game" id="chaseGame">
+  <button class="close-game" onclick="closeMiniGame()">✕ خروج</button>
+  <canvas id="chaseCanvas"></canvas>
+</div>
+
 <script>
   // تحميل البيانات من localStorage
   let clicks = parseInt(localStorage.getItem('clicks')) || 0;
   let level = parseInt(localStorage.getItem('level')) || 1;
+  let gameActive = false;
 
   const clickBtn = document.getElementById('clickBtn');
   const clicksEl = document.getElementById('clicks');
   const levelEl = document.getElementById('level');
   const messageEl = document.getElementById('message');
   const particlesEl = document.getElementById('particles');
+  const overlay = document.getElementById('overlay');
 
   // ألوان الخلفية لكل مستوى
   const backgrounds = [
@@ -168,28 +243,51 @@
     'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
     'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
     'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-    'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
+    'linear-gradient(135deg, #30cfd0, #330867)',
     'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)'
   ];
 
-  // تحديث العرض عند التحميل
+  // رسائل تحفيزية
+  const motivationalMessages = [
+    "💪 استمر! أنت قوي!",
+    "🔥 أنت لا تُقهر!",
+    "⭐ إنجاز رائع! كمل هكذا!",
+    "🏆 أنت بطل حقي!",
+    "🌟 لا تستسلم، النجاح قريب!"
+  ];
+
   updateDisplay();
   moveButton();
   updateBackground();
 
   // حدث الضغط على الزر
   clickBtn.addEventListener('click', () => {
+    if (gameActive) return;
+
     clicks++;
     createParticles();
 
     // كل 5 ضغطات = مستوى جديد
     if (clicks % 5 === 0) {
       level++;
-      showMessage(`🎉 مبروك! وصلت للمستوى ${level}`);
-      moveButton();
-      updateBackground();
       document.body.classList.add('level-up');
       setTimeout(() => document.body.classList.remove('level-up'), 800);
+
+      // المرحلة 5 = Flappy Bird
+      if (level === 5) {
+        showMessage("🎮 وصلت للمستوى 5! جرب لعبة Flappy Bird", true);
+        setTimeout(() => startFlappyGame(), 1500);
+      }
+      // المرحلة 6 = لعبة المطاردة
+      else if (level === 6) {
+        showMessage("⚡ المستوى 6! لعبة المطاردة فتحت", true);
+        setTimeout(() => startChaseGame(), 1500);
+      }
+      else {
+        showMessage(motivationalMessages[Math.floor(Math.random() * motivationalMessages.length)], true);
+        moveButton();
+        updateBackground();
+      }
     } else {
       showMessage(`+1 ضغطة!`);
     }
@@ -226,10 +324,11 @@
     document.body.style.background = backgrounds[bgIndex];
   }
 
-  function showMessage(text) {
+  function showMessage(text, isMotivational = false) {
     messageEl.textContent = text;
+    messageEl.classList.toggle('motivational', isMotivational);
     messageEl.classList.add('show');
-    setTimeout(() => messageEl.classList.remove('show'), 1500);
+    setTimeout(() => messageEl.classList.remove('show'), 3000);
   }
 
   function createParticles() {
@@ -245,12 +344,161 @@
       particle.style.setProperty('--tx', (Math.random() - 0.5) * 200 + 'px');
       particle.style.setProperty('--ty', (Math.random() - 0.5) * 200 + 'px');
       particlesEl.appendChild(particle);
-
       setTimeout(() => particle.remove(), 1000);
     }
   }
 
-  // زر إعادة البداية بالضغط مرتين على العنوان
+  // ================= FLAPPY BIRD =================
+  function startFlappyGame() {
+    gameActive = true;
+    overlay.classList.add('active');
+    document.getElementById('flappyGame').classList.add('active');
+
+    const canvas = document.getElementById('flappyCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 500;
+    canvas.height = 400;
+
+    let birdY = 200;
+    let birdVelocity = 0;
+    let pipes = [];
+    let score = 0;
+    let gameOver = false;
+
+    function draw() {
+      if (gameOver) return;
+
+      ctx.fillStyle = '#70c5ce';
+      ctx.fillRect(0, 0, 500, 400);
+
+      birdVelocity += 0.4;
+      birdY += birdVelocity;
+
+      // رسم الطير
+      ctx.fillStyle = '#ff0';
+      ctx.beginPath();
+      ctx.arc(50, birdY, 15, 0, Math.PI * 2);
+      ctx.fill();
+
+      // الأنابيب
+      if (pipes.length === 0 || pipes[pipes.length - 1].x < 300) {
+        pipes.push({x: 500, height: Math.random() * 200 + 50});
+      }
+
+      for (let pipe of pipes) {
+        pipe.x -= 3;
+        ctx.fillStyle = '#090';
+        ctx.fillRect(pipe.x, 0, 40, pipe.height);
+        ctx.fillRect(pipe.x, pipe.height + 120, 40, 400);
+
+        // تصادم
+        if (pipe.x < 50 && pipe.x + 40 > 35 && (birdY < pipe.height || birdY > pipe.height + 120)) {
+          gameOver = true;
+        }
+        if (pipe.x < 35) score++;
+      }
+
+      pipes = pipes.filter(p => p.x > -50);
+
+      if (birdY > 400 || birdY < 0) gameOver = true;
+
+      ctx.fillStyle = '#000';
+      ctx.font = '30px Cairo';
+      ctx.fillText('Score: ' + score, 10, 40);
+
+      if (!gameOver) requestAnimationFrame(draw);
+      else {
+        ctx.fillStyle = '#fff';
+        ctx.font = '40px Cairo';
+        ctx.fillText('Game Over!', 150, 200);
+        setTimeout(() => closeMiniGame(), 2000);
+      }
+    }
+
+    document.addEventListener('click', flappyJump);
+    document.addEventListener('touchstart', flappyJump);
+
+    function flappyJump() {
+      if (!gameOver) birdVelocity = -7;
+    }
+
+    draw();
+  }
+
+  // ================= لعبة المطاردة =================
+  function startChaseGame() {
+    gameActive = true;
+    overlay.classList.add('active');
+    document.getElementById('chaseGame').classList.add('active');
+
+    const canvas = document.getElementById('chaseCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 500;
+    canvas.height = 400;
+
+    let player = {x: 250, y: 200, radius: 15};
+    let target = {x: Math.random() * 400, y: Math.random() * 300, radius: 10};
+    let score = 0;
+    let time = 30;
+
+    function draw() {
+      ctx.fillStyle = '#1a1a2e';
+      ctx.fillRect(0, 0, 500, 400);
+
+      // رسم اللاعب
+      ctx.fillStyle = '#00f2fe';
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // رسم الهدف
+      ctx.fillStyle = '#ff6b6b';
+      ctx.beginPath();
+      ctx.arc(target.x, target.y, target.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // حركة الماوس
+      canvas.onmousemove = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        player.x = e.clientX - rect.left;
+        player.y = e.clientY - rect.top;
+      };
+
+      // فحص الاصطدام
+      const dist = Math.sqrt(Math.pow(player.x - target.x, 2) + Math.pow(player.y - target.y, 2));
+      if (dist < player.radius + target.radius) {
+        score++;
+        target.x = Math.random() * 400 + 50;
+        target.y = Math.random() * 300 + 50;
+      }
+
+      ctx.fillStyle = '#fff';
+      ctx.font = '25px Cairo';
+      ctx.fillText('Score: ' + score, 10, 30);
+      ctx.fillText('Time: ' + Math.floor(time), 10, 60);
+
+      time -= 0.016;
+      if (time <= 0) {
+        ctx.fillStyle = '#fff';
+        ctx.font = '40px Cairo';
+        ctx.fillText('انتهى الوقت! Score: ' + score, 100, 200);
+        setTimeout(() => closeMiniGame(), 2000);
+      } else {
+        requestAnimationFrame(draw);
+      }
+    }
+    draw();
+  }
+
+  function closeMiniGame() {
+    gameActive = false;
+    overlay.classList.remove('active');
+    document.getElementById('flappyGame').classList.remove('active');
+    document.getElementById('chaseGame').classList.remove('active');
+    moveButton();
+  }
+
+  // إعادة البداية بالضغط المزدوج
   let doubleClickTimer = null;
   document.querySelector('.stats').addEventListener('click', () => {
     if (doubleClickTimer === null) {
@@ -258,7 +506,7 @@
     } else {
       clearTimeout(doubleClickTimer);
       doubleClickTimer = null;
-      if (confirm('متأكد تريد إعادة البداية؟ كل التقدم غادي يتمسح!')) {
+      if (confirm('متأكد تريد إعادة البداية؟')) {
         clicks = 0;
         level = 1;
         saveData();
